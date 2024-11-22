@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>音楽プレーヤー</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+            position: relative;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        audio {
+            margin-top: 20px;
+            z-index: 10;
+        }
+
+        /* シークバーとボタンのスタイル */
+        .controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: absolute;
+            top: 228px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+        }
+
+        input[type="range"] {
+            width: 300px;
+            margin-right: 10px;
+            z-index: 10;
+        }
+
+        .playPauseImg {
+            width: 25px;  /* ボタンのサイズを半分に設定 */
+            height: 25px;
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        /* 画像を縦横比を維持して全体に表示させるためのスタイル */
+        .back-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            object-fit: contain;
+            z-index: -1;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* スマートフォン対応 */
+        @media only screen and (max-width: 600px) {
+            input[type="range"] {
+                width: 100%;
+            }
+            .playPauseImg {
+                width: 35px;  /* スマートフォンでは少し大きめに */
+                height: 35px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 通常のアニメーションに使う画像 -->
+    <img src="image/back_00000.png" alt="背景画像" class="back-image" id="backgroundImage">
+
+    <!-- 縦画面時に表示する画像 -->
+    <img src="image/tate.png" alt="縦画面画像" class="back-image hidden" id="tateImage">
+
+    <audio id="audioPlayer">
+        <source src="saida.mp3" type="audio/mpeg">
+        お使いのブラウザはaudio要素をサポートしていません。
+    </audio>
+
+    <br>
+    <div class="controls" id="controls">
+        <input type="range" id="seekBar" value="0" step="1" min="0" max="100">
+        <img src="image/saisei.png" alt="再生ボタン" id="playPauseImg" class="playPauseImg" onclick="togglePlayPause()">
+    </div>
+
+    <script>
+        const audioPlayer = document.getElementById('audioPlayer');
+        const seekBar = document.getElementById('seekBar');
+        const playPauseImg = document.getElementById('playPauseImg');
+        const backgroundImage = document.getElementById('backgroundImage');
+        const tateImage = document.getElementById('tateImage');
+        const controls = document.getElementById('controls');
+
+        let animationInterval;
+        let currentFrame = 0;
+        const totalFrames = 11;
+        const frameRate = 120; // 15fps (1000ms / 15fps)
+
+        // 音楽の再生と一時停止を切り替える関数
+        function togglePlayPause() {
+            if (audioPlayer.paused) {
+                audioPlayer.play();
+                playPauseImg.src = 'image/teisi.png';  // 再生中は停止ボタンを表示
+                updateSeekBar();
+                startAnimation();
+            } else {
+                audioPlayer.pause();
+                playPauseImg.src = 'image/saisei.png';  // 停止中は再生ボタンを表示
+                stopAnimation();
+            }
+        }
+
+        function setAudioPosition(value) {
+            const newTime = audioPlayer.duration * (value / 100);
+            audioPlayer.currentTime = newTime;
+
+            const progress = (audioPlayer.currentTime / audioPlayer.duration) * totalFrames;
+            currentFrame = Math.floor(progress);
+            const paddedFrame = String(currentFrame).padStart(5, '0');
+            backgroundImage.src = `image/back_${paddedFrame}.png`;
+        }
+
+        function updateSeekBar() {
+            if (!audioPlayer.paused) {
+                const value = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+                seekBar.value = value;
+            }
+            requestAnimationFrame(updateSeekBar);
+        }
+
+        seekBar.addEventListener('input', function() {
+            setAudioPosition(seekBar.value);
+        });
+
+        seekBar.addEventListener('mousedown', () => {
+            audioPlayer.pause();
+            stopAnimation();
+        });
+
+        seekBar.addEventListener('mouseup', () => {
+            audioPlayer.play();
+            startAnimation();
+        });
+
+        function startAnimation() {
+            stopAnimation();
+            animationInterval = setInterval(() => {
+                currentFrame = (currentFrame + 1) % totalFrames;
+                const paddedFrame = String(currentFrame).padStart(5, '0');
+                backgroundImage.src = `image/back_${paddedFrame}.png`;
+            }, frameRate);
+        }
+
+        function stopAnimation() {
+            clearInterval(animationInterval);
+        }
+
+        window.addEventListener('load', () => {
+            backgroundImage.src = 'image/back_00000.png';
+        });
+
+        // 縦画面と横画面を切り替えた際の処理
+        function checkOrientation() {
+            if (window.innerHeight > window.innerWidth) {
+                // 縦画面の場合
+                backgroundImage.classList.add('hidden');
+                tateImage.classList.remove('hidden');
+                controls.classList.add('hidden');
+            } else {
+                // 横画面の場合
+                backgroundImage.classList.remove('hidden');
+                tateImage.classList.add('hidden');
+                controls.classList.remove('hidden');
+            }
+        }
+
+        window.addEventListener('resize', checkOrientation);
+        window.addEventListener('load', checkOrientation);
+    </script>
+</body>
+</html>
